@@ -122,8 +122,6 @@ function s:SendMail_SSL()
 		call cursor(cline,ccol)
 	endtry
 
-	let b:transcript = ""
-	redir =>> b:transcript
 	" read the config files here and use an eval (vim.eval)"
 	" statement in python, or just read them from python."
 	" read/write files might be easiest in vim; use writefile(list,.)"
@@ -181,15 +179,12 @@ except smtplib.SMTPAuthenticationError as sme:
 finally:
     s.quit() # close the connection
 
-# Notes: a transcript of the messages is copied into the buffer variable
-# b:transcript.  This can be useful for reviewing the transaction, or
-# debugging the connection.  If the types of exceptions raised don't give
-# you enough information, you can use s.set_debuglevel(1) to get more
-# details.  Note that doing so may leave a copy of your username and
-# password in b:transcript.
+# Notes on debugging your SMTP connection:
+# the exceptions raised might tell you enough, but if not, use
+# s.set_debuglevel(1) to get more details.  You can review the
+# output with the :messages command.
 EOF
 
-	redir END
 endfunction
 "}}}
 " reading / writing dictionaries to disk"{{{
