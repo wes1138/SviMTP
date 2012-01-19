@@ -1,0 +1,159 @@
+% SviMTP Readme
+%
+%
+
+
+## Introduction
+
+This plugin enables you to send a quick email directly from Vim, using SMTP
+over an SSL connection.  Why would anyone want to do that?  Who knows -- maybe
+I'm the only one. I find it faster, and I like the continuity of not having to
+leave Vim.
+
+## Installation
+
+If you have the [pathogen] plugin, you can just put the root (`svimtp`) under
+`.vim/bundle`.  Else, copy `mail_svimtp.vim` to the directory
+`.vim/after/ftplugin/`, and `indent/mail.vim` to the corresponding
+`.vim/indent/mail.vim`.
+
+## Usage
+
+This plugin works for the `mail` filetype.  This can be set via autocommands,
+or explicitly via `:set ft=mail`.  Once you have a `mail` buffer open, simply
+compose your email, including at least a `To:` header (see the formatting
+remarks below), and send the message with the command `:SendMailSSL()`, using
+your current SMTP settings.  There is also a mapping (`<localleader> s`) that
+does the same thing.
+
+
+## Features
+
+* Runs SMTP over SSL using python's [smtplib].
+* Auto-completes email addresses with `<c-x><c-u>`.
+* Works well with supertab, providing a custom completion context (attempts
+  email address completion only if you are on a `To,cc` or `bcc` line;
+  otherwise uses your usual supertab completion settings.)
+* Provides improved indentation when composing mail headers.
+
+## Configuration / Setup
+
+### Basic Setup
+
+There are a few configuration files needed to make full use of the plugin,
+described below:
+
+1. `~/.svimtp`.  This contains your SMTP settings in a simple format. Here is
+   an example:
+
+		host = smtp.gmail.com
+		username = my.usual.address@gmail.com
+		password = worst_password_evahhhh
+		replyto = my.usual.address@gmail.com
+	*Remarks*:  The `replyto` field is for a default return address (it will
+	be used if you don't supply one with a `From:` header in a message). If
+	you want to specify a port, just put it after the host with a colon, e.g.
+	`smtp.gmail.com:465`.  Finally, note that the order in which the items are
+	specified is not important, however (thanks to my lazy programming) the
+	spaces around the `=` sign are important.  Make sure you have at least one
+	on each side.
+
+1. `~/.svimtp_addrs`.  This contains the list of email addresses you'd like to
+   be able to auto-complete.  The format is simple.  Here's an example:
+
+		Evariste Galois <evarist@unsolvable.org>
+		Saunders Mac Lane <sml@categories.net>
+		gauss@lemma.com
+		<random.address@somewhere.net>
+	You can include the "friendly names" or not, as long as there is just one
+	email address per line, and each one would make sense to an SMTP server.
+	You'll probably want to import this list from elsewhere.   If you use
+	[gmail to export them to a csv][gmailExport] in the "google csv format",
+	then something like this will get you close to what you want (as of
+	January 2012):
+	
+		cat google.csv | awk -F, 'NR!=1 {print $1" <"$29">"}' > .svimtp_addrs
+
+
+*Remarks*: You can change these filenames / locations to something else if
+you'd like.  See the comments in `mail_svimtp.vim`. Note for Gmail users: if
+you are using gmail and have [application specific passwords][gmailApppwd]
+setup, you may need to add one for SMTP.
+
+### Advanced Configuration
+
+To really make this plugin save you the time it is supposed to, there are a
+few additional steps you may want to consider.
+
+1. Make a skeleton for emails.  There's one provided in `skeleton.mail`, but
+   you might want to flesh it out a little.  You can setup autocommands to
+   load the template when needed.  See `:help skeleton`.
+
+1. Setup a keyboard mapping to initiate an email, and maybe leave yourself in
+   insert mode at a good location.  I put something like this in my `.vimrc`:
+
+		nnoremap <S-M-F12> :tabedit ~/temp_svimtp_message.mail<CR>A
+	If you have files with a `.mail` extension recognized as `ft=mail`, and
+	you have your skeleton setup as described above, it will be automatically
+	loaded.  If you don't want to bother with all of the autocommands and
+	such, I suppose you could just make a mapping that will explicitly `:set
+	ft=mail` and load a template yourself.
+
+
+
+### Dependencies
+
+Requires Vim to be compiled with `+python`, and of course requires a working
+python installation.  The plugin has been tested with python 2.7.  Although
+the plugin provides some configurations for [supertab], everything should
+still work if you don't have it.  You also need to have an SMTP server out
+there somewhere that agrees to send mail for you.  ([Gmail][gmail] provides
+this service if you need it.)
+
+
+## Message Formatting
+
+At the moment, the plugin only sends plain text, non-MIME emails, and you are
+left with some of the responsibility of making sure your email is properly
+formatted.  This will probably happen naturally, but you may be caught off
+guard at times, and the syntax file doesn't really help much.  A minimal
+template can be found in the file `skeleton.mail`.  Here are some guidelines,
+just in case you have trouble.
+
+* The header fields (To:, From:, Subject:, etc.) **must be delimited** from
+  the rest of the message body (the text of your email) by a **blank line**.
+  Without any blank lines, your message will get stuck in the headers, and the
+  recipient probably won't see it.  If you have a premature blank line, parts
+  of your header will wind up in the text of the email.
+* When typing several addresses in a row, you should separate them by commas.
+  Line breaks (non-consecutive) are okay, but you have to have **a least one
+  leading whitespace character** to keep each new line a part of that header's
+  body.  The provided indentation file should help you out, but be careful
+  anyway.
+* Here is a sample of a well-formed message:
+
+  		To: recipient1@aaa.com, recipient2@bbb.com,
+			recipient3@ccc.com
+		Subject: Test message.
+
+		This is the body of the email.  Note that there's a blank line above
+		it to separate it from the headers, and that the headers do not
+		contain any blank lines.
+
+
+## Other Notes
+
+This is currently $\alpha$ software.  It hasn't been tested extensively on any
+setup besides my own.  I know it to work with Gmail's SMTP server, and a few
+others, but I'm sure things are bound to go wrong.  Please don't use this to
+send mission-critical emails until there's been some time to establish its
+reliability.
+
+<!--  links  -->
+
+[gmail]: http://support.google.com/mail/bin/answer.py?hl=en&answer=13287
+[supertab]: http://www.vim.org/scripts/script.php?script_id=1643
+[smtplib]: http://docs.python.org/library/smtplib.html
+[pathogen]: http://www.vim.org/scripts/script.php?script_id=2332
+[gmailExport]: http://support.google.com/mail/bin/answer.py?hl=en&answer=24911
+[gmailApppwd]: http://support.google.com/accounts/bin/static.py?hl=en&page=guide.cs&guide=1056283&answer=185833
