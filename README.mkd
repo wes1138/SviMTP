@@ -29,7 +29,7 @@ does the same thing.
 
 * Runs SMTP over SSL using python's [smtplib].
 * Auto-completes email addresses with `<c-x><c-u>`.
-* Works well with supertab, providing a custom completion context (attempts
+* Works well with [supertab], providing a custom completion context (attempts
   email address completion only if you are on a `To,cc` or `bcc` line;
   otherwise uses your usual supertab completion settings.)
 * Provides improved indentation when composing mail headers.
