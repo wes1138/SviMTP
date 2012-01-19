@@ -9,6 +9,10 @@ let b:did_indent = 1
 setlocal autoindent nosmartindent nocindent indentexpr=GetMailIndent(v:lnum)
 setlocal indentkeys+=<:>
 
+if exists("*GetMailIndent")
+  finish
+endif
+
 function GetMailIndent(lnum)
 	" Note: the subject line is intentionally excluded from the list,
 	" since it would usually be annoying, even if legal in RFC2822.
