@@ -50,7 +50,7 @@ let g:SviMTPMatchStrictness = 1
 "}}}
 "}}}
 " mappings"{{{
-nnoremap <localleader>s :call <SID>SendMail_SSL()<CR>
+nnoremap <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
 "}}}
 " completion of addresses"{{{
@@ -70,7 +70,7 @@ function! CompleteEmailAddrs(findstart, base)
 	let filter = ['','\(^\|<\)\@<=','^'][g:SviMTPMatchStrictness] . a:base
 	for m in s:addrlist
 		if m =~ filter
-			call add(s:res, m)
+			call add(s:res, {"word": m, "icase": 1})
 			let s:count = s:count+1
 		endif
 	endfor
