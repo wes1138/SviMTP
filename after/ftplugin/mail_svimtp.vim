@@ -42,11 +42,14 @@ endif
 let g:SviMTPMatchStrictness = 1
 " Here's how to interpret the values:
 " 0 --- looks for matches *anywhere in the string* (probably not
-" all that useful)
-" 1 --- (the default setting) matches at the start of the friendly
-" name, or the start of the email address (the part after the "<")
-" 2 --- matches *only* the start of the friendly name (might be useful
-" if you have a very long list of contacts.)
+" 		all that useful)
+" 1 --- (the default setting) looks for matches at the beginning of
+" 		any word, but not after '@' or '.' symbols. (This is kinder to
+" 		all those poor people whose name starts with 'com' or 'gmail'.)
+" 2 --- matches at the start of the friendly name, or the start of
+" 		the email address (the part after the "<")
+" 3 --- matches *only* the start of the friendly name (might be useful
+" 		if you have a very long list of contacts.)
 "}}}
 "}}}
 " mappings"{{{
@@ -67,7 +70,8 @@ function! CompleteEmailAddrs(findstart, base)
 	" find matching addresses:
 	let s:res = []
 	let s:count = 0
-	let filter = ['','\(^\|<\)\@<=','^'][g:SviMTPMatchStrictness] . a:base
+	let filter = 
+		\ ['','\(@\|\.\)\@<!\<\zs','\(^\|<\)\zs','^'][g:SviMTPMatchStrictness] . a:base
 	for m in s:addrlist
 		if m =~ filter
 			call add(s:res, {"word": m, "icase": 1})
