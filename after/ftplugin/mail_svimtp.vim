@@ -54,6 +54,7 @@ let g:SviMTPMatchStrictness = 1
 "}}}
 " mappings"{{{
 nnoremap <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
+nnoremap <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
 "}}}
 " completion of addresses"{{{
@@ -99,10 +100,10 @@ let g:SuperTabCompletionContexts =
 "}}}
 "}}}
 " Send mail using SMTP over an SSL connection"{{{
-function s:SendMail_SSL()
+function s:SendMail_SSL(...)
 	if !has('python')
 		echo "Vim must be compiled with +python to use this feature."
-		return
+		return 1
 	endif
 	" Do a quick (and extremely crude) sanity check to make
 	" sure there is something that looks like a message header
@@ -119,7 +120,7 @@ function s:SendMail_SSL()
 				" clear the prompt before printing another message:
 				normal! :<Esc>
 				echo "Message not sent."
-				return
+				return 1
 			endif
 		endif
 	finally
@@ -132,8 +133,11 @@ function s:SendMail_SSL()
 	let smtprc = s:freadDictionary(s:SMTPconfigfile)
 	if smtprc == {}
 		echo "No SMTP configuration found. (See after/mail_svimtp.vim)"
-		return
+		return 1
 	endif
+	" we'll let the python code set this variable to tell us
+	" whether or not the email was sent
+	let fail = 1  " very optimistic.
 
 python << EOF
 import vim
@@ -162,6 +166,7 @@ try:
     print "Authentication succeeded; sending mail."
     s.sendmail(msg['from'],msg['to'].split(","),msg.as_string())
     print "Message sent."
+    vim.command("let fail = 0") # wow. we didn't fail after all.
 except smtplib.SMTPConnectError:
     print "Unable to connect to server."
 except smtplib.SMTPServerDisconnected:
@@ -173,13 +178,13 @@ except smtplib.SMTPRecipientsRefused as sme:
     print "One or more recipients refused:"
     print sme.recipients
 except smtplib.SMTPDataError as sme:
-    print "Data error: " + str(sme.smtp_code) + ": " + smtp_error
+    print "Data error: " + str(sme.smtp_code) + ": " + sme.smtp_error
 except smtplib.SMTPHeloError as sme:
     print "Cranky-pants server refused HELO for some reason."
-    print str(sme.smtp_code) + ": " + smtp_error
+    print str(sme.smtp_code) + ": " + sme.smtp_error
 except smtplib.SMTPAuthenticationError as sme:
     print "Authentication error:"
-    print str(sme.smtp_code) + ": " + smtp_error
+    print str(sme.smtp_code) + ": " + sme.smtp_error
 finally:
     s.quit() # close the connection
 
@@ -188,6 +193,11 @@ finally:
 # s.set_debuglevel(1) to get more details.  You can review the
 # output with the :messages command.
 EOF
+
+	if !fail && a:0 && a:1
+		q!
+	endif
+	return fail
 
 endfunction
 "}}}
