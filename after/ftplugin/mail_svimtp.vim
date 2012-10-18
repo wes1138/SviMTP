@@ -53,8 +53,8 @@ let g:SviMTPMatchStrictness = 1
 "}}}
 "}}}
 " mappings"{{{
-nnoremap <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
-nnoremap <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
+nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
+nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
 "}}}
 " completion of addresses"{{{
@@ -146,6 +146,26 @@ import email
 
 # first, get the contents of the current buffer:
 buftext = "\n".join(vim.current.buffer)
+# TODO: you have to make msg a multi-part message, or else the
+# attachments will fail.  Not sure what the best way is to do the
+# conversion, though.  Worst case scenario: parse the message
+# just as before, copy the headers to a new MIMEMultipart message,
+# and then create a new message with the payload copied, and the
+# headers set appropriately.  I would try to make a MIMEText
+# message without any headers and attach that to the message first:
+#   body = MIMEText(buftext_payload,"plain")
+# and then attach the other parts as you've seen in the examples:
+# http://docs.python.org/library/email-examples.html
+# NOTE: for copying the headers, you will want to iterate through
+# msg.keys() and assign multipartmsg[k] = msg[k]
+# NOTE: you should not always make the message multipart!  Just do
+# this when you have attachments.
+# TODO: you have to provide a user interface for this as well.  I
+# would recommend something like the mental stack, and use a tmpfile
+# to keep track of the entries.  I think it is best to :unlet the
+# tmpfile name once the message is sent.  Better to accidently not
+# send an attachment then to send a potentially sensitive document
+# to an unintended recipient.
 msg = email.message_from_string(buftext)
 vsmtprc = vim.eval("smtprc")
 if msg['from'] is None:
@@ -222,4 +242,74 @@ function s:freadDictionary(fname)
 	endfor
 	return dnary
 endfunction
+"}}}
+" functions for building an attachment list {{{
+function s:pushAttachment() "{{{
+	if !exists("s:att_list_tmpfile")
+		let s:att_list_tmpfile = tempname()
+	endif
+	let sitem = input("Attach file: ", "", "file")
+	if sitem == ""
+		return
+	endif
+	" this is a little annoying: vim script doesn't have a clean way
+	" to append to a file.
+	let tmpList = []
+	if filereadable(s:att_list_tmpfile)
+		let tmpList = readfile(s:att_list_tmpfile)
+	end
+	call add(tmpList, sitem)
+	call writefile(tmpList,s:att_list_tmpfile)
+endfunction
+"}}}
+function s:popAttachment(mode) "{{{
+	let tlist = []
+	if exists("s:att_list_tmpfile")
+		let tlist = readfile(s:att_list_tmpfile)
+	endif
+	if tlist == []
+		echohl WarningMsg
+		echon "Attachment list is empty"
+		echohl None
+		return
+	endif
+	if a:mode == 0
+		let indxToRemove = len(tlist) - 1
+	else
+		" now dump the contents of the stack into a numbered list and
+		" let the user select an item to remove.
+		let tlPrompt = deepcopy(tlist)
+		call map(tlPrompt,'v:key . ". " . v:val')
+		let prompt = "Select item to pop:\n" . join(tlPrompt,"\n") . "\n"
+		let indxToRemove = input(prompt)
+		if indxToRemove == ""
+			return
+		endif
+	endif
+	" echo and remove element:
+	echo "Popped: " . remove(tlist,indxToRemove)
+	" now write back to the file.
+	call writefile(tlist,s:att_list_tmpfile)
+	" One would hope that popping a stack would run in O(1) time.
+	" I guess this isn't so bad, since we are drawing it all the time anyway.
+	return
+endfunction
+"}}}
+function s:showAttachmentStack() "{{{
+	" load the attachment stack into the location list.
+	if !exists("s:att_list_tmpfile")
+		echohl WarningMsg
+		echon "Attachment list is empty"
+		echohl None
+		return
+	endif
+	let tlist = readfile(s:att_list_tmpfile)
+	call setloclist(0,[]) " first clear it out.
+	for ditem in tlist
+		laddexpr ditem
+	endfor
+	lopen
+	" call s:ToggleList("Location List", 'l')
+endfunction
+"}}}
 "}}}
