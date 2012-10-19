@@ -207,7 +207,7 @@ if len(aList) > 0:
         else:
             aMsg = MIMEBase(maintype, subtype)
             aMsg.set_payload(f.read())
-            encoders.encode_base64(aMsg)
+            email.encoders.encode_base64(aMsg)
 
         f.close()
         aMsg.add_header('Content-Disposition', 'attachment',
