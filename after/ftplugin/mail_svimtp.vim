@@ -154,6 +154,7 @@ function s:SendMail_SSL(...)
 python << EOF
 import vim
 import os
+import glob as G
 import smtplib
 import email
 import mimetypes
@@ -179,10 +180,17 @@ if len(aList) > 0:
     # now make a text only message with the body
     body = MIMEText(msg.get_payload(),"plain")
     msgmp.attach(body)
-    # TODO: now iterate through the list of attachments and attach:
+    # First expand the list of attachments, in case it contains
+    # shell globs.  We also need to expand the home directory
+    expanded = []
     for att in aList:
+        att = os.path.expanduser(att)
+        expanded.extend(G.glob(att))
+    # at this point, expanded has the final list of attachments.
+    for att in expanded:
         if not os.path.isfile(att):
-            # TODO: current version does not expand home directory (~/...)
+            # NOTE: this case should have been taken care of
+            # by the glob(...) above.
             print "Warning: " + att + " not found."
             continue
         ctype,encoding = mimetypes.guess_type(att)
