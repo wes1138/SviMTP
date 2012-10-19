@@ -55,7 +55,14 @@ let g:SviMTPMatchStrictness = 1
 " mappings"{{{
 nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
 nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
+nnoremap <buffer> <silent> <localleader>a :call <SID>pushAttachment()<CR>
+nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
+nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
+nnoremap <buffer> <silent> <localleader>R :call <SID>popAttachment(1)<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
+command! -nargs=0 AttachFile  call s:pushAttachment()
+command! -nargs=0 PopAttachment  call s:popAttachment(1)
+command! -nargs=0 ShowAttachments  call s:showAttachmentStack()
 "}}}
 " completion of addresses"{{{
 " basic completion function"{{{
@@ -135,41 +142,72 @@ function s:SendMail_SSL(...)
 		echo "No SMTP configuration found. (See after/mail_svimtp.vim)"
 		return 1
 	endif
+	" now load the list of attachments, if any:
+	let attachList = []
+	if exists("s:att_list_tmpfile")
+		let attachList = readfile(s:att_list_tmpfile)
+	endif
 	" we'll let the python code set this variable to tell us
 	" whether or not the email was sent
 	let fail = 1  " very optimistic.
 
 python << EOF
 import vim
+import os
 import smtplib
 import email
+import mimetypes
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.audio import MIMEAudio
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
 
 # first, get the contents of the current buffer:
 buftext = "\n".join(vim.current.buffer)
-# TODO: you have to make msg a multi-part message, or else the
-# attachments will fail.  Not sure what the best way is to do the
-# conversion, though.  Worst case scenario: parse the message
-# just as before, copy the headers to a new MIMEMultipart message,
-# and then create a new message with the payload copied, and the
-# headers set appropriately.  I would try to make a MIMEText
-# message without any headers and attach that to the message first:
-#   body = MIMEText(buftext_payload,"plain")
-# and then attach the other parts as you've seen in the examples:
-# http://docs.python.org/library/email-examples.html
-# NOTE: for copying the headers, you will want to iterate through
-# msg.keys() and assign multipartmsg[k] = msg[k]
-# NOTE: you should not always make the message multipart!  Just do
-# this when you have attachments.
-# TODO: you have to provide a user interface for this as well.  I
-# would recommend something like the mental stack, and use a tmpfile
-# to keep track of the entries.  I think it is best to :unlet the
-# tmpfile name once the message is sent.  Better to accidently not
-# send an attachment then to send a potentially sensitive document
-# to an unintended recipient.
+aList = vim.eval("attachList")
 msg = email.message_from_string(buftext)
 vsmtprc = vim.eval("smtprc")
 if msg['from'] is None:
     msg['from'] = vsmtprc['replyto']
+
+if len(aList) > 0:
+    # need to make a multi=part message.
+    msgmp = MIMEMultipart()
+    for k in msg.keys(): # steal the headers
+        msgmp[k] = msg[k]
+    # now make a text only message with the body
+    body = MIMEText(msg.get_payload(),"plain")
+    msgmp.attach(body)
+    # TODO: now iterate through the list of attachments and attach:
+    for att in aList:
+        if not os.path.isfile(att):
+            # TODO: current version does not expand home directory (~/...)
+            print "Warning: " + att + " not found."
+            continue
+        ctype,encoding = mimetypes.guess_type(att)
+        if ctype is None or encoding is not None:
+            ctype = "application/octet-stream"
+        maintype,subtype = ctype.split("/",1)
+        f = open(att,'rb')
+        if maintype == "text":
+            aMsg = MIMEText(f.read(), _subtype=subtype)
+        elif maintype == "image":
+            aMsg = MIMEImage(f.read(), _subtype=subtype)
+        elif maintype == "audio":
+            aMsg = MIMEAudio(f.read(), _subtype=subtype)
+        else:
+            aMsg = MIMEBase(maintype, subtype)
+            aMsg.set_payload(f.read())
+            encoders.encode_base64(aMsg)
+
+        f.close()
+        aMsg.add_header('Content-Disposition', 'attachment',
+            filename=os.path.basename(att))
+        msgmp.attach(aMsg)
+
+    # we no longer need the original msg, so just overwrite:
+    msg = msgmp
 
 # by now, we should have a propery formatted message. Send it.
 try:
@@ -187,6 +225,8 @@ try:
     s.sendmail(msg['from'],msg['to'].split(","),msg.as_string())
     print "Message sent."
     vim.command("let fail = 0") # wow. we didn't fail after all.
+    if len(aList) > 0:
+        vim.command("unlet s:att_list_tmpfile") # clear attachment list
 except smtplib.SMTPConnectError:
     print "Unable to connect to server."
 except smtplib.SMTPServerDisconnected:
@@ -297,13 +337,16 @@ endfunction
 "}}}
 function s:showAttachmentStack() "{{{
 	" load the attachment stack into the location list.
-	if !exists("s:att_list_tmpfile")
+	let tlist = []
+	if exists("s:att_list_tmpfile")
+		let tlist = readfile(s:att_list_tmpfile)
+	endif
+	if tlist == []
 		echohl WarningMsg
 		echon "Attachment list is empty"
 		echohl None
 		return
 	endif
-	let tlist = readfile(s:att_list_tmpfile)
 	call setloclist(0,[]) " first clear it out.
 	for ditem in tlist
 		laddexpr ditem
