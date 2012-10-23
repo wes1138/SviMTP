@@ -33,6 +33,7 @@ does the same thing.
   email address completion only if you are on a `To,cc` or `bcc` line;
   otherwise uses your usual supertab completion settings.)
 * Provides improved indentation when composing mail headers.
+* Attach files using shell globs.
 
 ## Configuration / Setup
 
@@ -111,7 +112,7 @@ this service if you need it.)
 
 ## Message Formatting
 
-At the moment, the plugin only sends plain text, non-MIME emails, and you are
+You are
 left with some of the responsibility of making sure your email is properly
 formatted.  This will probably happen naturally, but you may be caught off
 guard at times, and the syntax file doesn't really help much.  A minimal
@@ -138,6 +139,17 @@ just in case you have trouble.
 		it to separate it from the headers, and that the headers do not
 		contain any blank lines.
 
+## Attachments
+
+Attachments are also supported, via the following commands:
+
+* `:AttachFile`  This will prompt you for a filename.  You can use shell globs
+  if you want, and it will expand your home directory (`~`) but it will not
+  expand environment variables at the moment.
+* `:PopAttachment`  This will present you with a list of the current
+  attachments.  Select the one you want to remove by its index.
+* `:ShowAttachments`  This fills the location list with your list of
+  attachments (globs are not yet expanded).
 
 ## Other Notes
 
