@@ -55,12 +55,12 @@ let g:SviMTPMatchStrictness = 1
 " mappings"{{{
 nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
 nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
-nnoremap <buffer> <silent> <localleader>a :call <SID>pushAttachment()<CR>
+nnoremap <buffer> <localleader>a :AttachFile 
 nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
 nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
 nnoremap <buffer> <silent> <localleader>R :call <SID>popAttachment(1)<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
-command! -nargs=0 AttachFile  call s:pushAttachment()
+command! -nargs=1 -complete=file AttachFile  call s:pushAttachment(<f-args>)
 command! -nargs=0 PopAttachment  call s:popAttachment(1)
 command! -nargs=0 ShowAttachments  call s:showAttachmentStack()
 "}}}
@@ -292,12 +292,11 @@ function s:freadDictionary(fname)
 endfunction
 "}}}
 " functions for building an attachment list {{{
-function s:pushAttachment() "{{{
+function s:pushAttachment(fname) "{{{
 	if !exists("s:att_list_tmpfile")
 		let s:att_list_tmpfile = tempname()
 	endif
-	let sitem = input("Attach file: ", "", "file")
-	if sitem == ""
+	if a:fname == ""
 		return
 	endif
 	" this is a little annoying: vim script doesn't have a clean way
@@ -306,7 +305,7 @@ function s:pushAttachment() "{{{
 	if filereadable(s:att_list_tmpfile)
 		let tmpList = readfile(s:att_list_tmpfile)
 	end
-	call add(tmpList, sitem)
+	call add(tmpList, a:fname)
 	call writefile(tmpList,s:att_list_tmpfile)
 endfunction
 "}}}

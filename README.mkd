@@ -143,9 +143,9 @@ just in case you have trouble.
 
 Attachments are also supported, via the following commands:
 
-* `:AttachFile`  This will prompt you for a filename.  You can use shell globs
-  if you want, and it will expand your home directory (`~`) but it will not
-  expand environment variables at the moment.
+* `:AttachFile <filename>`  This accepts a single file name to be attached.
+  You can use shell globs if you want, and it will expand your home directory
+  (`~`).  It will not expand environment variables at the moment.
 * `:PopAttachment`  This will present you with a list of the current
   attachments.  Select the one you want to remove by its index.
 * `:ShowAttachments`  This fills the location list with your list of
