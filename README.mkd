@@ -153,6 +153,22 @@ Attachments are also supported, via the following commands:
 * `:ShowAttachments`  This fills the location list with your list of
   attachments (globs are not yet expanded).
 
+Given the limitations of the shell globbing from python, I would recommend
+something like the following in your .bashrc:
+
+	# open vim in mail mode with attachment list from shell glob:
+	vmail() {
+		tfname=`mktemp -u --suffix=".mail"`
+		if (( $# > 0 )); then
+			vim -n -c "startinsert!" -c "AttachFile $*" -- "$tfname"
+		else
+			vim -n -c "startinsert!" -- "$tfname"
+		fi
+	}
+
+Now you can use more fancy shell globs, e.g. `vmail pictures/{1..10}.jpg`.
+
+
 ## Other Notes
 
 This is currently $\alpha$ software.  It hasn't been tested extensively on any

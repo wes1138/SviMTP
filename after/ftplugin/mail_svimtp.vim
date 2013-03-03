@@ -60,7 +60,7 @@ nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
 nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
 nnoremap <buffer> <silent> <localleader>R :call <SID>popAttachment(1)<CR>
 command! -nargs=0 SendMailSSL call s:SendMail_SSL()
-command! -nargs=1 -complete=file AttachFile  call s:pushAttachment(<f-args>)
+command! -nargs=+ -complete=file AttachFile  call s:pushAttachment(<f-args>)
 command! -nargs=0 PopAttachment  call s:popAttachment(1)
 command! -nargs=0 ShowAttachments  call s:showAttachmentStack()
 "}}}
@@ -292,20 +292,22 @@ function s:freadDictionary(fname)
 endfunction
 "}}}
 " functions for building an attachment list {{{
-function s:pushAttachment(fname) "{{{
+function s:pushAttachment(...) "{{{
+	if a:0 == 0 || a:1 == ""
+		return
+	endif
 	if !exists("s:att_list_tmpfile")
 		let s:att_list_tmpfile = tempname()
-	endif
-	if a:fname == ""
-		return
 	endif
 	" this is a little annoying: vim script doesn't have a clean way
 	" to append to a file.
 	let tmpList = []
 	if filereadable(s:att_list_tmpfile)
 		let tmpList = readfile(s:att_list_tmpfile)
-	end
-	call add(tmpList, a:fname)
+	endif
+	for fname in a:000
+		call add(tmpList, fname)
+	endfor
 	call writefile(tmpList,s:att_list_tmpfile)
 endfunction
 "}}}
