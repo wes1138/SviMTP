@@ -36,6 +36,9 @@ if filereadable(expand(s:address_complfile))
 else
 	let s:addrlist = []
 endif
+
+" auto-save new addresses?
+let s:address_autosave = 1
 "}}}
 " Auto-completion settings"{{{
 " This value controls how matching of email addresses is done.
@@ -150,6 +153,7 @@ function s:SendMail_SSL(...)
 	" we'll let the python code set this variable to tell us
 	" whether or not the email was sent
 	let fail = 1  " very optimistic.
+	let recips = "" " python code will set this for us, but we'll parse it
 
 python << EOF
 import vim
@@ -171,6 +175,8 @@ msg = email.message_from_string(buftext)
 vsmtprc = vim.eval("smtprc")
 if msg['from'] is None:
     msg['from'] = vsmtprc['replyto']
+
+vim.command("let recips = \"" + msg['to'] + "\"")
 
 if len(aList) > 0:
     # need to make a multi=part message.
@@ -262,8 +268,32 @@ finally:
 # output with the :messages command.
 EOF
 
-	if !fail && a:0 && a:1
-		q!
+	if !fail
+		if s:address_autosave == 1
+			" try to save the addresses if they're not in our list
+			let reciplist = split(recips,',\(\s\|\n\)*')
+			let dirty = 0
+			for recip in reciplist
+				" check against entire list of addresses... @_@
+				let found = 0
+				for m in s:addrlist
+					if m =~ recip
+						let found = 1
+						break
+					endif
+				endfor
+				if found == 0
+					call add(s:addrlist,recip)
+					let dirty = dirty + 1
+				endif
+			endfor
+			if dirty > 0
+				call writefile(s:addrlist, expand(s:address_complfile))
+			endif
+		endif
+		if a:0 && a:1
+			q!
+		endif
 	endif
 	return fail
 
