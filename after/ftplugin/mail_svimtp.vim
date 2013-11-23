@@ -236,7 +236,11 @@ try:
     print "Authenticating..."
     s.login(vsmtprc['username'],vsmtprc['password'])
     print "Authentication succeeded; sending mail."
-    s.sendmail(msg['from'],msg['to'].split(","),msg.as_string())
+    cclist = [] if msg['cc'] is None else msg['cc'].split(",")
+    bcclist = [] if msg['bcc'] is None else msg['bcc'].split(",")
+    s.sendmail(msg['from'],
+               msg['to'].split(",") + cclist + bcclist,
+               msg.as_string())
     print "Message sent."
     vim.command("let fail = 0") # wow. we didn't fail after all.
     if len(aList) > 0:
