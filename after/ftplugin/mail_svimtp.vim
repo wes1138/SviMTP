@@ -198,6 +198,7 @@ if len(aList) > 0:
             # NOTE: this case should have been taken care of
             # by the glob(...) above.
             print "Warning: " + att + " not found."
+            vim.command("redraw")
             continue
         ctype,encoding = mimetypes.guess_type(att)
         if ctype is None or encoding is not None:
@@ -228,20 +229,25 @@ try:
     s = smtplib.SMTP_SSL()
 	# s.set_debuglevel(1) # if you need to debug the connection.
     print "Connecting to " + vsmtprc['host'] + " ..."
+    vim.command("redraw")
     s.connect(vsmtprc['host'])
     print "Connected."
+    vim.command("redraw")
     # according to the docs, an explicit ehlo isn't necessary, but my server
     # won't accept a subsequent auth (login) without it:
     s.ehlo("localhost")
     print "Authenticating..."
+    vim.command("redraw")
     s.login(vsmtprc['username'],vsmtprc['password'])
     print "Authentication succeeded; sending mail."
+    vim.command("redraw")
     cclist = [] if msg['cc'] is None else msg['cc'].split(",")
     bcclist = [] if msg['bcc'] is None else msg['bcc'].split(",")
     s.sendmail(msg['from'],
                msg['to'].split(",") + cclist + bcclist,
                msg.as_string())
     print "Message sent."
+    vim.command("redraw")
     vim.command("let fail = 0") # wow. we didn't fail after all.
     if len(aList) > 0:
         vim.command("unlet s:att_list_tmpfile") # clear attachment list
