@@ -27,7 +27,7 @@ does the same thing.
 
 ## Features
 
-* (New 8D) [pandoc] support to send messages as html.
+* (New 8D) markdown support to send messages as html.
 * Runs SMTP over SSL using python's [smtplib].
 * Auto-completes email addresses with `<c-x><c-u>`.
 * Works well with [supertab], providing a custom completion context (attempts
@@ -108,8 +108,8 @@ python installation.  The plugin has been tested with python 2.7.  Although
 the plugin provides some configurations for [supertab], everything should
 still work if you don't have it.  You also need to have an SMTP server out
 there somewhere that agrees to send mail for you.  ([Gmail][gmail] provides
-this service if you need it.)  The pandoc feature requires [pandoc] and also
-awk.
+this service if you need it.)  The markdown feature requires some
+implementation of markdown (I prefer [pandoc]...) and also awk.
 
 
 ## Message Formatting
@@ -171,17 +171,18 @@ something like the following in your .bashrc:
 Now you can use more fancy shell globs, e.g. `vmail pictures/{1..10}.jpg`.
 
 
-## Pandoc
+## Markdown
 
-If you have [pandoc] and awk, you can send fancy html versions of your email
+If you have markdown and awk, you can send fancy html versions of your email
 as an alternative to the plain text.  Just type the message body using
-[constructs that pandoc understands][pandocreadme], and send as usual, except
-call `SendMail_SSL(1,1)` (parameter 2 says to try pandoc).  The default
-mapping for this is `<localleader><localleader>S`.  To configure the path to
-pandoc, just edit the `s:pandoc` variable in `mail_svimtp.vim`.  Defaults to
-`/usr/local/bin/pandoc`.
+[markdown constructs][markdownwiki], and send as usual, except call
+`SendMail_SSL(1,1)` (parameter 2 says to try markdown).  The default mapping
+for this is `<localleader><localleader>S`.  To configure the path, and the
+command line arguments to markdown, just edit the `s:markdown` variable in
+`mail_svimtp.vim`.  Defaults to
+`/usr/local/bin/pandoc -s -S -f markdown -t html`.
 
-Some neat pandoc things to point out, in case you don't already know:
+Some neat [pandoc] things to point out, in case you don't already know:
 
 * Nice syntax highlighting for many of your favorite programming languages
 * LaTeX can be rendered as MathML
@@ -210,3 +211,4 @@ reliability.
 [gmailApppwd]: http://support.google.com/accounts/bin/static.py?hl=en&page=guide.cs&guide=1056283&answer=185833
 [pandoc]: http://johnmacfarlane.net/pandoc/
 [pandocreadme]: http://johnmacfarlane.net/pandoc/README.html
+[markdownwiki]: https://en.wikipedia.org/wiki/Markdown

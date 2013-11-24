@@ -40,8 +40,8 @@ endif
 " auto-save new addresses?
 let s:address_autosave = 1
 
-" $(which pandoc)??  Set to empty string to disable, of course.
-let s:pandoc = "/usr/local/bin/pandoc"
+" $(which markdown)??  Set to empty string to disable, of course.
+let s:markdown = "/usr/local/bin/pandoc -s -S -f markdown -t html"
 " NOTE -- this feature also requires a working awk to be in your $PATH
 "}}}
 " Auto-completion settings"{{{
@@ -156,11 +156,10 @@ function s:SendMail_SSL(...)
 		let attachList = readfile(s:att_list_tmpfile)
 	endif
 	let text_html_att = ""
-	if a:2 == 1 && s:pandoc != ""
+	if a:0 > 1 && a:2 == 1 && s:markdown != ""
 		let text_html_att = tempname() . ".html"
 		silent exe "silent write !awk '{if (NF == 0 && NR > 2) {x=1}} x{print $0}'"
-					\ . " | " . s:pandoc . " -s -S -f markdown -t html > "
-					\ . text_html_att
+					\ . " | " . s:markdown . " > " . text_html_att
 	endif
 	" we'll let the python code set this variable to tell us
 	" whether or not the email was sent
