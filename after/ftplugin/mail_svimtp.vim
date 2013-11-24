@@ -39,6 +39,10 @@ endif
 
 " auto-save new addresses?
 let s:address_autosave = 1
+
+" $(which pandoc)??  Set to empty string to disable, of course.
+let s:pandoc = "/usr/local/bin/pandoc"
+" NOTE -- this feature also requires a working awk to be in your $PATH
 "}}}
 " Auto-completion settings"{{{
 " This value controls how matching of email addresses is done.
@@ -58,6 +62,7 @@ let g:SviMTPMatchStrictness = 1
 " mappings"{{{
 nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
 nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
+nnoremap <buffer> <silent> <localleader><localleader>S :call <SID>SendMail_SSL(1,1)<CR>
 nnoremap <buffer> <localleader>a :AttachFile 
 nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
 nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
@@ -150,6 +155,13 @@ function s:SendMail_SSL(...)
 	if exists("s:att_list_tmpfile")
 		let attachList = readfile(s:att_list_tmpfile)
 	endif
+	let text_html_att = ""
+	if a:2 == 1 && s:pandoc != ""
+		let text_html_att = tempname() . ".html"
+		silent exe "silent write !awk '{if (NF == 0 && NR > 2) {x=1}} x{print $0}'"
+					\ . " | " . s:pandoc . " -s -S -f markdown -t html > "
+					\ . text_html_att
+	endif
 	" we'll let the python code set this variable to tell us
 	" whether or not the email was sent
 	let fail = 1  " very optimistic.
@@ -178,14 +190,27 @@ if msg['from'] is None:
 
 vim.command("let recips = \"" + msg['to'] + "\"")
 
-if len(aList) > 0:
+htmlversion = vim.eval("text_html_att")
+
+if len(aList) > 0 or htmlversion != "":
     # need to make a multi=part message.
     msgmp = MIMEMultipart()
     for k in msg.keys(): # steal the headers
         msgmp[k] = msg[k]
-    # now make a text only message with the body
-    body = MIMEText(msg.get_payload(),"plain")
+    # if html version is available, we need the body to be multipart/alt.
+    if htmlversion != "":
+        # set the body to multipart as well.
+        body = MIMEMultipart('alternative')
+        body.attach(MIMEText(msg.get_payload(),"plain"))
+        with open(htmlversion,"r") as f:
+            htmlstr = f.read()
+        body.attach(MIMEText(htmlstr,"html"))
+    else:
+        # the whole body is just one text part
+        body = MIMEText(msg.get_payload(),"plain")
+
     msgmp.attach(body)
+    # Now process the other attachments, if any.
     # First expand the list of attachments, in case it contains
     # shell globs.  We also need to expand the home directory
     expanded = []
@@ -277,6 +302,11 @@ finally:
 # s.set_debuglevel(1) to get more details.  You can review the
 # output with the :messages command.
 EOF
+
+	" remove temp file (although vim would do this for us upon exiting)
+	if text_html_att != ""
+		call delete(text_html_att)
+	endif
 
 	if !fail
 		if s:address_autosave == 1
