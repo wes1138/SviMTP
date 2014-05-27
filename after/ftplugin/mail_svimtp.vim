@@ -1,4 +1,17 @@
 setlocal completefunc=CompleteEmailAddrs
+" mappings"{{{
+nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
+nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
+nnoremap <buffer> <silent> <localleader><localleader>S :call <SID>SendMail_SSL(1,1)<CR>
+nnoremap <buffer> <localleader>a :AttachFile 
+nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
+nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
+nnoremap <buffer> <silent> <localleader>R :call <SID>popAttachment(1)<CR>
+command! -nargs=0 SendMailSSL call s:SendMail_SSL()
+command! -nargs=+ -complete=file AttachFile  call s:pushAttachment(<f-args>)
+command! -nargs=0 PopAttachment  call s:popAttachment(1)
+command! -nargs=0 ShowAttachments  call s:showAttachmentStack()
+"}}}
 if exists("g:loaded_after_mail")
 	finish
 endif
@@ -58,19 +71,6 @@ let g:SviMTPMatchStrictness = 1
 " 3 --- matches *only* the start of the friendly name (might be useful
 " 		if you have a very long list of contacts.)
 "}}}
-"}}}
-" mappings"{{{
-nnoremap <buffer> <silent> <localleader>s :call <SID>SendMail_SSL()<CR>
-nnoremap <buffer> <silent> <localleader><localleader>s :call <SID>SendMail_SSL(1)<CR>
-nnoremap <buffer> <silent> <localleader><localleader>S :call <SID>SendMail_SSL(1,1)<CR>
-nnoremap <buffer> <localleader>a :AttachFile 
-nnoremap <buffer> <silent> <localleader>A :call <SID>showAttachmentStack()<CR>
-nnoremap <buffer> <silent> <localleader>r :call <SID>popAttachment(0)<CR>
-nnoremap <buffer> <silent> <localleader>R :call <SID>popAttachment(1)<CR>
-command! -nargs=0 SendMailSSL call s:SendMail_SSL()
-command! -nargs=+ -complete=file AttachFile  call s:pushAttachment(<f-args>)
-command! -nargs=0 PopAttachment  call s:popAttachment(1)
-command! -nargs=0 ShowAttachments  call s:showAttachmentStack()
 "}}}
 " completion of addresses"{{{
 " basic completion function"{{{
@@ -250,7 +250,7 @@ if len(aList) > 0 or htmlversion != "":
 
 # by now, we should have a propery formatted message. Send it.
 try:
-    s = smtplib.SMTP_SSL()
+    s = smtplib.SMTP_SSL(timeout=9)
 	# s.set_debuglevel(1) # if you need to debug the connection.
     print "Connecting to " + vsmtprc['host'] + " ..."
     vim.command("redraw")
@@ -263,7 +263,7 @@ try:
     print "Authenticating..."
     vim.command("redraw")
     s.login(vsmtprc['username'],vsmtprc['password'])
-    print "Authentication succeeded; sending mail."
+    print "Authentication succeeded; sending mail..."
     vim.command("redraw")
     cclist = [] if msg['cc'] is None else msg['cc'].split(",")
     bcclist = [] if msg['bcc'] is None else msg['bcc'].split(",")
